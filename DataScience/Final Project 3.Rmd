@@ -1,0 +1,371 @@
+---
+title: "Project 3: Airline fares and Credit Card Loans"
+author: 'Cal Parker and Gabriella Martin '
+date: "2022-11-24"
+output:
+  html_document:
+    toc: true
+    toc_depth: '3'
+    df_print: paged
+  pdf_document:
+    keep_tex: true
+    toc: true
+    toc_depth: 3
+---
+
+## **Panel Data Models**
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+library(tidyverse)
+library(DataExplorer)
+library(ggfortify)
+library(lmtest)
+library(jtools)
+library(Boruta)
+library(stargazer)
+library(jtools)
+library(devtools)
+library(knitr)
+library(xtable)
+library(broom)
+library(car)
+library(data.table)
+library(ggplot2)
+library(goftest)
+library(graphics)
+library(gridExtra)
+library(nortest)
+library(Rcpp)
+library(stats)
+library(utils)
+library(psych)
+library(plm)
+```
+## Question 1.
+
+Our chosen panel data set consists of cost data with 90 observations for 6 U.S. Airline companies over 15 years (1970-84) 
+
+Our Predictors:
+I (Airline): I indicates the different airline companies. For our data set, we have a total of 6 different U.S. airlines.
+T (Year): T indicates the year for which cross-sectional data is being observed. The duration of T for our data is from 1970 -1984, for a total of 15 years. 
+PF (Fuel Price): This is the global average price paid at the refinery for jet fuel at a time T. This fuel price is determined by a set contract with the airline and the fuel company. 
+LF (Load Factor): This is a measure of how much of an airline's passenger carrying capacity has been utilized. It generally depends upon flight seating capacity, airline route, demand, etc., Bigger airplanes would have the capacity for a bigger load factor. 
+Q (revenue passenger miles): This metric shows the number of miles traveled by paying passengers and is typically an airline traffic statistic.
+Cost (1000, the data): Depends on various factors including our predictors such as Fuel Price, Load Factor, as well as other predictors such as Lease & Depreciation, Aircraft Maintenance, Labor, and Airport Handling Charges.
+
+Our dependent variable is cost, called "C"
+ 
+With our regression analysis, we will explore how various indicators and predictors affect the cost of flying for different airline companies over time. This analysis would be useful for airline companies that are interested in lowering their average total costs over time. This would also be useful for companies to figure out the most efficient way to allocate resources in order to minimize average variable costs while maintaining revenue in order to maximize their profit margins. While the profits for airline companies were already trending downward, this issue is now especially important in the wake of the Covid-19 pandemic since we saw a massive decrease in the amount of people flying which led to some airline companies even filing for bankruptcy.
+
+```{r analyzed_data}
+setwd("C:/Users/cal3p/OneDrive/Desktop/Max Desktop/UCLA Folder Max")
+#loads data
+airlinepaneldata<-read_csv("PanelData.csv")
+plot_missing(airlinepaneldata, missing_only = FALSE)
+```
+We see that nothing is missing in our data. 
+
+## Question 2.
+
+```{r histograms}
+#plots histograms tables and boxplots
+plot_histogram(airlinepaneldata)
+kable(summary(airlinepaneldata))
+boxplot(airlinepaneldata)
+plot(airlinepaneldata)
+```
+Looking at our histograms, we can see that our C and Q variables are heavily left skewed. I and T look like factors, which make sense because they are (I=airline and T=time). LF appears normally distributed and PF appears to be bimodal (two humps at both ends). 
+
+Looking at our box plots, we can see that C appears to have some outliers and is on a bigger scale. 
+
+### Correlation plots.
+```{r correlation_plots_2}
+#creates a correlation plot
+pairs.panels(airlinepaneldata)
+```
+
+On the diagonal we have our histograms (in blue). Notably, C and Q are left skewed. 
+
+For our correlation plots, we can see that I and C are moderately negatively correlated. I and Q are moderately negatively correlated as well. This makes sense again because I is our airline (factor). C and Q are strongly positively correlated. This makes sense again (and is a good thing) because C is our response varaible and we want our indicators to be highly related to it
+
+## Question 3.
+
+### Pooled Model
+
+```{r modeling_pooled}
+#creates three regressions Pooled fixed and random
+pooledreg<-plm(C~Q+PF+LF, airlinepaneldata, index = c("I", "T"), model = "pooling")
+fixedeffectsreg<-plm(C~Q+PF+LF, data = airlinepaneldata, index = c("I", "T"), model = "within")
+randomeffectsreg<-plm(C~Q+PF+LF, data = airlinepaneldata, index = c("I", "T"), model = "random")
+
+#Shows output of the pooled model
+summary(pooledreg)
+```
+Ho: Pooled OLS is not the appropriate estimator
+H1: Pooled OLS is the appropriate estimator
+
+Our P-value is less than .05 and therefore we can reject the null hypothesis and accept the alternative hypothesis.
+Our conclusion, consequently, is that the pooled OLS can be a good estimator. Nevertheless, pooled OLS does not consider the heterogeneity across airline firms or years.
+
+Looking at our output, all of our estimates are statistically significant at the 99.9% confidence level. Our estimates for each variable suggest the following: A one unit change in Q (output) increases C (cost) by nearly 2 million dollars. A one unit change in PF (fuel price) minimally affects C (cost) -- by 1.225 units. Lastly, for LF (load factor) a one unit change decreases C (cost) by roughly 3 million dollars. Additionally, we should note that the R^2 is quite high (.9461), meaning that are model explains our data quite well.
+
+It is important to note that pooled OLS disregards all individual-specific effects of panel data. Despite the low P-value and high R^2, which suggests that the model is fit to use, we cannot rely on the pooled model because it ignores heterogeneity.
+
+### Fixed Model
+
+```{r modeling_fixedeffects}
+#Shows output of the fixed effects model
+summary(fixedeffectsreg)
+```
+
+### Fixed Effects model.
+
+Note, that we do not have an intercept here because the slope of these lines is now fixed. 
+
+Our P-Value is less than .05, showing that our overall model is good. 
+
+Our output shows again that the individual effect of Q, PF, and LF are significant at the 99.9% confidence level. The interpretation of our coefficients is as follows: A one unit change in Q produces a 3.3190^6 increase in cost. A one unit change in PF will produce a .77307 increase in cost. And lastly, a one unit change in LF will result in a 3.7974^6 decrease in cost. Our R^2 is high indicating more variability explained by the model.  
+
+### Random Effects Model.
+
+```{r modeling_randomeffects}
+#shows output of the random effects model
+summary(randomeffectsreg)
+```
+
+Our output for our random effects model shows statistical significance for our estimates at the 99.9% confidence level  (individual effect of Q, PF, and LF are significant). The P-value is less than .05 and therefore the overall model is good. 
+
+In this model, our coefficient for Q is 2.28886^6, indicating that a one unit change in Q results in a roughly 2.3 million increase in cost. A one unit change in PF results in a 1.1236 increase in cost. A one unit change in LF results in a 3.0850^6 (roughly 3.1 million) decrease in cost. Our R^2 is similarly high in the random effects model, but it is slightly lower than both the pooled model and the fixed effects model. 
+
+### Residual Plots.
+
+```{r residual_plots}
+## creates three graphs for each model and plots the residuals and the dependent variables
+data.frame(
+  C = airlinepaneldata$C,
+  pooled = pooledreg$residuals,
+  random_effects = randomeffectsreg$residuals,
+  fixed_effects = fixedeffectsreg$residuals
+) %>%
+  pivot_longer(-C, names_to = "model_type", values_to = "residuals") %>%
+  ggplot(aes(C, y = I(C - residuals))) +
+  geom_point() +
+  stat_smooth(formula = "y ~ x", se = FALSE, method = "lm") + 
+  facet_wrap(~ model_type) +
+  theme_bw()
+```
+Here, we ran our diagnostics and saw that there is positive correlation between our dependent variable and the residuals. This is true for all three models. 
+
+### fitted distributions
+
+```{r fitted_distributions}
+## Creates histograms for each model fitted values on x axis and number of flights on y axis.
+data.frame(
+  C = airlinepaneldata$C,
+  pooled = predict(pooledreg, airlinepaneldata),
+  random_effects = predict(randomeffectsreg, airlinepaneldata),
+  fixed_effects = predict(fixedeffectsreg, airlinepaneldata)
+) %>%
+  pivot_longer(-C, names_to = "model_type", values_to = "fitted") %>%
+  ggplot(aes(fitted)) +
+  geom_histogram(bins = 30) +
+  labs(y = "Number of Flights", x = "Fitted Value") + 
+  facet_wrap(~ model_type) +
+  theme_bw()
+```
+Looking at our fitted distributions, all three of the models tend to predict lower costs over high costs for flights overall (hence the left skewedness). This makes sense, given that our original cost variable was also left skewed. (So it is a good thing our fitted values are also tending that way!)
+
+### First Hausman Test to compare the pooled and fixed effects model. 
+
+```{r hausmantest_1}
+#hausman test of pooledreg and fixedeffectsreg
+phtest(pooledreg, fixedeffectsreg)
+```
+Our Hausman test shows that we have a p-value of 4.118^-14, which is less than .05. Therefore, we reject our null that one model is inconsistent and we will want to use fixed effects. 
+
+```{r hausmantest_2}
+#hausman test of randomeffectsreg and fixedeffectsreg
+phtest(randomeffectsreg, fixedeffectsreg)
+```
+
+### Second Hausman test comparing fixed effects and random effects. 
+
+Again, we have a low p-value (3.832^-13), which is less than .05. Therefore, we reject our null that one model is inconsistent and will want to use fixed effects.
+
+Pooled regression has the least amount of controls/constraints, whereas the random effects will add the variables we are using as constraints. Fixed effects is the most constrained of the three models because it does not allow our intercept to vary randomly. After doing both of these Hausman tests, which both showed that fixed effects should be used, we can conclude that the fixed effect model is an appropriate estimator and random effects are probably correlated with Xit.
+
+## **Qualitative Dependent Variable Models**
+
+
+## Question 1.
+For the next part of the project, we examine a dataset from 9516 3 year loans that uses a dependent variable, not.fully.paid, to predict whether a customer will fully pay their credit/loan payment or not. A 1 represents the lender paid and a 0 represents that the customer did not pay. The dataset has 13 independent variables which includes 2 nominal, or indicator variable, and the remaining 11 are continuous variables. 
+The explanatory indicator variables purpose shows us what the purpose of the credit line is expected to be used for. 
+
+purpose Indicator Variable values:
+ 0 indicates that the line will be used for debt consolidation
+ 1 indicates use of a credit card
+ 2 indicates the debt is used for home improvement
+ 3 indicates the debt is used for a small business loan
+ 4 indicates the debt is used for a major purchase
+ 5 indicates the debt is used for education
+ 6 indicates the debt is used for everything else that could be used as a reason to acquire a loan. 
+ 
+The explanatory indicator variable credit.policy shows us whether the creditor meets the criteria provided by LendingClub.com to qualify for a loan. 
+credit.policy Indicator Variable values:
+ 0: customer doesnt meet the credit underwriting criteria of the Lending 
+ 1: customer meets the credit underwriting criteria of the Lending 
+
+Our continuous variables:
+ int.rate: gives a value of the interest rate measured in basis points
+ installment: the monthly installments owed to the borrower measured in USD
+ log.annual.inc: the natural log of the borrowers' income
+ dti: the borrower's debt to income ratio
+ fico: the FICO score of the borrower
+ days.with.credit.line: the number of days that the borrower has had access to the credit line
+ revol.bal: the borrowers' revolving balance
+ revol.util: the borrowers' revolving line that has been utilized while they have access to the credit line
+ inq.last.6mths: the borrower's number of inquiries by creditors in the last 6 months
+ delinq.2yrs: the number of times the borrower has been deliquient past 30 days of the payment due date
+ public.rec: the number of derogatory public records the borrower has had
+
+As mentioned previously, the binary, or qualitative, dependent variable not.fully.paid is used to determine whether a customer will fully pay their credit/loan payment or not.
+not.fully.paid Binary Dependent Variable:
+ 0: does not fully pay the loan payment on time
+ 1: fully pays the loan payment on time
+ 
+## Question 2
+```{r read_in_data_2}
+loans_data<-read_csv("loans.csv")
+plot_histogram(loans_data)
+kable(summary(loans_data))
+plot(loans_data)
+```
+Days with credit line appears almost normal with a right tail. Log annual income looks normalally distributed. Installmens and fico look relatively chi squared distributed with giant jumps. Public.rec purpose delinq inq.last.6mths and revolv.bal exponentially decline from left to right. Revol is almost uniformly distributed. DTI is just a blob with jumps in the middle. The correlation graph is really hard to interpret because of the large quantity of variables included in the dataset.
+
+```{r}
+plot_missing(loans_data, missing_only = FALSE)
+```
+Our data has almost no missing values. 
+
+### Correlation plots
+
+Next, we will run our correlation plots.
+```{r correlation_plots}
+pairs.panels(loans_data)
+```
+The table above shows us our correlation between combinations of paired variables that are used to create the models. 
+Now we will see which of the 3 models fits our regression best: Probit, Logit, or Linear Probability models. 
+
+## Question 3
+
+### Models
+
+```{r}
+
+##"Linear Probability Model"
+LPMmodel<-lm(not.fully.paid~credit.policy+purpose+int.rate+installment+log.annual.inc+dti+fico+days.with.credit.line+revol.bal+revol.util+inq.last.6mths+delinq.2yrs+public.rec, data = loans_data)
+kable(tidy(LPMmodel), digits=4,align='c', caption = "Linear Probability Model")
+
+##"Probit Model"
+olsprobit<-glm(not.fully.paid~credit.policy+purpose+int.rate+installment+log.annual.inc+dti+fico+days.with.credit.line+revol.bal+revol.util+inq.last.6mths+delinq.2yrs+public.rec, family=binomial(link="probit"), data=loans_data)
+kable(tidy(olsprobit), digits=4, align='c', caption="Probit Model")
+
+##"Logit Model"
+olslogit<-glm(not.fully.paid~credit.policy+purpose+int.rate+installment+log.annual.inc+dti+fico+days.with.credit.line+revol.bal+revol.util+inq.last.6mths+delinq.2yrs+public.rec, family=binomial(link="logit"),data=loans_data)
+kable(tidy(olslogit), digits=4, align='c', caption="Logit Model")
+
+#creates a graph that shows all model marginal effects and SEs
+stargazer(LPMmodel, olsprobit, olslogit,
+  header=FALSE,
+  type="text",
+  column.labels=c("LPM","probit","logit"),
+  omit.table.layout="n")
+
+```
+
+This part of our code shows the regression lines for the logit, probit, and linear probability models without the heteroskedasticity and correlation corrected errors. Most of the coeffiecients for all 3 models are statistically significant at the 5% level.
+
+### AIC
+
+```{r}
+
+##print a 
+
+hce1<- coeftest(olslogit,vcov.=hccm(olslogit,type="hc1"))
+hce2<- coeftest(olsprobit,vcov.=hccm(LPMmodel,type="hc1"))
+hce3<- coeftest(LPMmodel,vcov.=hccm(LPMmodel,type="hc1"))
+
+stargazer(hce1, hce2, hce3,
+  header=FALSE,
+  type="text",
+  column.labels=c("LPM","probit","logit"),
+  omit.table.layout="n")
+
+AIC(olsprobit)
+AIC(olslogit)
+AIC(LPMmodel)
+AIC(hce1)
+AIC(hce2)
+AIC(hce3)
+
+```
+This part of our code shows the regression lines for the logit, probit, and linear probability models with the heteroskedasticity and correlation corrected errors. Our estimates are the same for both corrected and uncorrected logit, probit, and linear probability models, but the standard errors have significantly decreased for the probit and logit models. The probit coefficients are all statistically significant at the .1% level and the logit has mostly statisitcally significant values at the .1% level and the remaining coefficients are significant at the 1% level.
+
+### Fitted distributions 
+
+```{r loans_fitted_distributions}
+
+data.frame(
+  outcome = loans_data$not.fully.paid,
+  linear = predict(LPMmodel, loans_data),
+  probit = predict(olsprobit, loans_data),
+  logit = predict(olslogit, loans_data)
+) %>%
+  pivot_longer(-outcome, names_to = "model_type", values_to = "fitted") %>%
+  ggplot(aes(outcome, y = fitted)) +
+  geom_point() +
+  stat_smooth(formula = "y ~ x", se = FALSE, method = "lm") + 
+  facet_wrap(~ model_type) +
+  theme_bw()
+
+```
+
+These charts show us the fitted distributions of the Logit, Probit, and Linearity Probability Models. The slopes for the probit and linear probability model are relatively flat according to the data points, and the logit model has a slightly steeper slope between the values 0 and 1 for the full loan payment prediction.4 
+### Wald tests and LR tests
+
+```{r}
+##creates summaries of each of the individual models
+library(margins)
+library(aod)
+margins_summary(LPMmodel)
+margins_summary(olsprobit)
+margins_summary(olslogit)
+
+
+#LR test for LPM model and probit
+lrtest(LPMmodel, olsprobit)
+#LR test for Logit and Probit
+lrtest(olslogit, olsprobit)
+
+wald.test(Sigma = vcov(LPMmodel), b = coef(LPMmodel), Terms = 1:14)
+wald.test(Sigma = vcov(LPMmodel), b = coef(LPMmodel), Terms = 3:3)
+wald.test(Sigma = vcov(olsprobit), b = coef(olsprobit), Terms = 3:3)
+wald.test(Sigma = vcov(olslogit), b = coef(olslogit), Terms = 3:3)
+wald.test(Sigma = vcov(LPMmodel), b = coef(LPMmodel), Terms = 4:4)
+wald.test(Sigma = vcov(olsprobit), b = coef(olsprobit), Terms = 4:4)
+wald.test(Sigma = vcov(olslogit), b = coef(olslogit), Terms = 4:4)
+wald.test(Sigma = vcov(LPMmodel), b = coef(LPMmodel), Terms = 5:5)
+wald.test(Sigma = vcov(olsprobit), b = coef(olsprobit), Terms = 5:5)
+wald.test(Sigma = vcov(olslogit), b = coef(olslogit), Terms = 5:5)
+
+```
+We used the wald test on multiple variables on each model and they all produced about the same results. Statistically significant variables had low p values and variables with low significants had high p values. Since all models have almost the same level of significance for each variable this result makes sense. 
+
+LR test suggests that there is no significant improvement in each of the models
+
+As expected for all variables the probit and logit models Marginal effects are extremely close to each other. The slope of linear probability model is almost 0. Probit also has a similarly flat slope while logit looks a bit steeper. Probit is usually preferred over logit when sample sizes are large. Since the LR test showed no significant improvement from one model over the other, we will say probit is preferred because our sample size is large. LPM model had the lowest AIC so perhaps that is the best model.
+
+
+
