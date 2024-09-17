@@ -1,0 +1,339 @@
+---
+title: Project 2: Cal Parker and Jordan Youhanaie
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+date: "2023-05-16"
+---
+
+
+```{r}
+
+# Clear all variables and prior sessions
+# Load libraries
+library(tseries)
+#library(forecast)
+#library(fpp3)
+library(tseries)
+library(seasonal)
+#library(fable)
+library(stats)
+require(graphics)
+library(dynlm)
+tinytex::install_tinytex()
+#install.packages("ggplot")
+#library(ggplot)
+#library(aTSA)
+#library(ggplot2)
+library(tidyverse)
+library(readxl)
+library(tsibble)
+#install.packages("tinytex")
+#tinytex::install_tinytex()
+library(tinytex)
+# Load libraries
+library(tseries)
+library(forecast)
+library(fpp3)
+library(tseries)
+library(seasonal)
+library(fable)
+library(stats)
+require(graphics)
+#library(seasonalview)
+library(feasts)
+
+utils::install.packages("ggplot")
+#utils::contrib.url(repos, "source")
+library(vars)
+
+```
+
+**##Section I**
+
+For this project, we used New Car Retail Sales data and New Home Supply from the United States. More specificially, the FRED database titles these datasets as "Retail Sales: New Car Dealers" and "Monthly Supply of New Houses in the United States" and the values that FRED presents come from the U.S. Census Bureau. Both housing and car sales data are vital to assessing the direction and size of an economy, and for the United States, they present massive portions of total transaction costs and economic activity for assessing the status of the economy. These datasets are updated monthly and begin in January 1992. The number of houses available for purchase in the U.S. was around 7.7 million homes to begin 2023 and the total value of retail sales for new cars was around 90 billion for the same moment. 
+
+Section II
+
+```{r}
+setwd("C:/Users/cal3p/OneDrive/Desktop/Max Desktop/UCLA Folder Max/UCLA Fall '22/104&L/Econ 104&L/R Files Econ 104")
+
+HousingData<-read_csv("MSACSRNSA (1).csv")
+HousingTimeSeries<-ts(HousingData$MSACSRNSA, start = 1992, frequency = 12)
+
+RetailNewCarsData<-read_csv("RetailNewCarsData (2).csv")
+RetailNewCarsDataTS<-ts(RetailNewCarsData$MRTSSM44111USN, start = 1992, frequency = 12)
+
+```
+
+```{r}
+#A
+
+#retail new cars decomposition
+
+autoplot(HousingTimeSeries)
+tsdisplay(HousingTimeSeries)
+
+autoplot(RetailNewCarsDataTS)
+tsdisplay(RetailNewCarsDataTS)
+
+```
+
+```{r}
+#B
+HousingTSTibble<-as_tsibble(HousingTimeSeries, key = origin)
+#tidyr::as_tibble(UsedCarTSTibble)
+
+ HousingDecomp<-HousingTSTibble|>
+  model(
+    STL(HousingTimeSeries~ trend(window = 12) +
+                   season(window = "periodic"),
+    robust = TRUE)) |>
+  components() |>
+  autoplot()
+ 
+ HousingDecomp
+ 
+ 
+ #retail new cars decomposition
+ 
+ RNCTSTibble<-as_tsibble(RetailNewCarsDataTS, key = origin)
+#tidyr::as_tibble(RNCTSTibble)
+
+ RNCTSDecomp<-RNCTSTibble|>
+  model(
+    STL(RetailNewCarsDataTS~ trend(window = 12) +
+                   season(window = "periodic"),
+    robust = TRUE)) |>
+  components() |>
+  autoplot()
+ 
+ RNCTSDecomp
+
+```
+According to our stl decompositions for the new car retail sales and new housing supply data, there appears to be significant seasonal variation for the new car retail sales, and significant seasonal variation for the new housing supply time series. The trend for new car retail sales increases almost constantly while the new housing supply increases around 2008 and the levels out back to its previous levels before 2008. This change in new housing supply is most likely caused by the financial crisis since there were so many homes that were not accessible to creditor that could have previously bought the same houses. Also, there is massive variation around 2008 for the remainder portion of the decomposition of supply of housing. 
+
+```{r}
+#C
+t <- seq(1992, 2023 + 2/12,length=length(RetailNewCarsDataTS))
+
+#retail sales for new cars time series
+m_trend <- lm(RetailNewCarsDataTS ~ t)
+plot(RetailNewCarsDataTS, ylab="Car Sales", xlab="Time", lwd=2, col='skyblue3', xlim=c(1992,2023 + 2/12))
+lines(t,m_trend$fit,col="red3",lwd=2)
+
+summary(m_trend)
+plot(t,m_trend$res, ylab="Residuals",type='l',xlab="Time")
+tsdisplay(m_trend$residuals)
+
+fit <- Arima(RetailNewCarsDataTS, order=c(2,0,0), xreg = cbind(t), seasonal=list(order=c(1,1,1)))
+plot(RetailNewCarsDataTS, ylab="Car Sales", xlab="Time", lwd=2, col='skyblue3', xlim=c(1992,2023 + 2/12))
+lines(t, fit$fit,col="red3",lwd=2)
+
+autoArima1<-auto.arima(RetailNewCarsDataTS)
+plot(RetailNewCarsDataTS, ylab="Car Sales", xlab="Time", lwd=2, col='skyblue', xlim=c(1992,2023 + 2/12))
+lines(t, autoArima1$fit,col="green4",lwd=2)
+
+
+#housing supply time series
+m_trend1 <- lm(HousingTimeSeries ~ t)
+plot(HousingTimeSeries, ylab="Car Sales", xlab="Time", lwd=2, col='skyblue3', xlim=c(1992,2023 + 2/12))
+lines(t,m_trend1$fit,col="red3",lwd=2)
+
+summary(m_trend1)
+plot(t,m_trend1$res, ylab="Residuals",type='l',xlab="Time")
+tsdisplay(m_trend1$residuals)
+
+fit2 = Arima(HousingTimeSeries, order=c(2,0,1), xreg = cbind(t), seasonal=list(order=c(1,1,1)))
+plot(HousingTimeSeries, ylab="Housing Supply", xlab="Time", lwd=2, col='skyblue3', xlim=c(1992,2023 + 2/12))
+lines(t, fit2$fit,col="red3",lwd=2)
+
+autoArima2<-auto.arima(HousingTimeSeries)
+plot(HousingTimeSeries, ylab="Housing Supply", xlab="Time", lwd=2, col='skyblue', xlim=c(1992,2023 + 2/12))
+lines(t, autoArima2$fit,col="green4",lwd=2)
+
+```
+
+```{r}
+#E
+plot(fit$fitted, fit$residuals)
+lines(as.double(fit$fitted), lm(fit$residuals ~ fit$fitted)$fit,col="red3",lwd=2)
+
+plot(fit2$fitted, fit2$residuals)
+lines(as.double(fit2$fitted), lm(fit2$residuals ~ fit2$fitted)$fit,col="red3",lwd=2)
+
+```
+After plotting the residuals against the fitted values of the data, we can see that the new car retail sales error variances for different values of the fits are mostly constant. This indicates that for increases in the values of the fitted values, we can expect our forecasts to be equally reliable and consistent for increasing values as the economy for new cars grows. On the other hand, for new housing supply, we see a slight and sudden increase in the error variances for fitted values above 
+
+The ACF and PACF plots of the new housing supply time series suggests that there is seasonal variation of residuals between both the autoregressive and moving average components of the charts because of the increasing and decaying components of the ACF and alternating PACF lag directions with significant spikes around 12 months apart from each other. Also for the ACF and PACF plots of the new car retail sales time series suggests that there is also seasonal variation of residuals for the autoregressive and moving average components of the charts for the same reasons as the as the new housing supply ACF and PACF charts. There are common relationships among the seasonal variation between the two time series plots.
+
+```{r}
+tsdisplay(fit$residuals)
+tsdisplay(fit2$residuals)
+
+```
+ 
+
+
+```{r}
+#g
+
+cusum1<-c(fit$residuals[1])
+for (i in 2:length(fit$residuals)) 
+{
+  cusum1[i]<-(cusum1[i-1]+fit$residuals[i])
+}
+ts(cusum1, start = 1992, frequency=12)|>autoplot()
+
+
+cusum2<-c(fit2$residuals[1])
+for (i in 2:length(fit2$residuals)) 
+{
+  cusum2[i]<-(cusum2[i-1]+fit2$residuals[i])
+}
+ts(cusum2, start = 1992, frequency=12)|>autoplot()
+
+
+#h
+summary(fit)
+summary(auto.arima(RetailNewCarsDataTS))
+summary(fit2)
+summary(auto.arima(HousingTimeSeries))
+
+
+#i and j
+#selected models forecast with their respective auto arima forecast plots
+
+forecast1<-forecast(fit, xreg = seq(2023 + 3/12, 2024 + 2/12, length = 12))
+#ts(forecast1)
+autoplot(forecast1)
+
+forecast2<-forecast(autoArima1, h=12)
+autoplot(forecast2)
+
+forecast3<-forecast(fit2, xreg = seq(2023 + 3/12, 2024 + 2/12, length = 12))
+autoplot(forecast3)
+
+forecast4<-forecast(autoArima2, h=12)
+autoplot(forecast4)
+
+
+```
+The diagnostic statistics suggest that the best model for the new car retail sales data, according to both AIC and BIC is from the auto arima function of the time series. Meanwhile, the diagnostic statistics suggest that that best model for new housing supply is our arima function according to AIC and the auto arima function according to the BIC. Since the BIC punishes overfitting more harshly to get a more accurate model, it may be best to use the auto arima function, but there are many other loss function estimates that favor our function when we decide to use either for forecasting the new housing supply data.
+
+The Mean Absolute Percentage Errors (MAPE) were lowest suggested by the auto arima functions for the New Car Retail Sales but was lower using our model for the New Housing Supply data. For future forecasting methods, it would be best to use the auto arima functions for the most accurate point estimate for the new car sales time series' but may be best to use our arima function for the new housing supply data if the criteria is sufficient to produce an optimal forecast.
+
+```{r}
+#K
+
+
+ HousingDecomp<-HousingTSTibble|>
+  model(
+    STL(HousingTimeSeries~ trend(window = 12) +
+                   season(window = "periodic"),
+    robust = TRUE)) |>
+  components() |>
+  autoplot()
+ 
+ HousingDecomp
+
+ 
+retailFitandAuto<-c(fit,autoArima1)
+housingFitandAuto<-c(fit2,autoArima2)
+
+#model(fit,autoArima1)
+RetailNewCarsData$MRTSSM44111USN
+
+auscafe <- aus_retail |>
+  filter(stringr::str_detect(Industry, "Takeaway")) |>
+  summarise(Turnover = sum(Turnover))
+
+train <- auscafe |>
+  filter(year(Month) <= 2013)
+STLF <- decomposition_model(
+  STL(log(Turnover) ~ season(window = Inf)),
+  ETS(season_adjust ~ season("N"))
+)
+
+cafe_models <- train |>
+  model(
+    ets = ETS(Turnover),
+    stlf = STLF,
+    arima = ARIMA(log(Turnover))
+  ) |>
+  mutate(combination = (ets + stlf + arima) / 3)
+cafe_fc <- cafe_models |>
+  forecast(h = "5 years")
+
+auscafe <- aus_retail |>
+  filter(stringr::str_detect(Industry, "Takeaway")) |>
+  summarise(Turnover = sum(Turnover))
+
+
+
+```
+
+
+```{r}
+
+#L
+
+Var1=cbind(RetailNewCarsDataTS, HousingTimeSeries)
+Var_tot=data.frame(Var1)
+VARselect(Var_tot, lag.max = 10, type = "trend", season = 12)
+
+Var_model=VAR(Var_tot,p=3, type = "trend", season = 12)
+#summarise(Var_model)
+#plot(Var_model, names = "RetailNew")
+tsdisplay(residuals(Var_model)[,1])
+tsdisplay(residuals(Var_model)[,2])
+
+
+```
+
+Our VAR model suggests that 
+
+```{r}
+
+#m
+irf(Var_model)
+plot(irf(Var_model, n.ahead = 50, type="trend"))
+
+```
+From observing the relationship between the impulse response functions (IRF) between new car sales and new housing supply, the housing time series presents charts that suggest there strong behavior for following the new car time series. Also, there appears to be no causal relationship for the new car time series to follow the housing time series. 
+These findings present us with data consistent to our previous section that measured the  VAR model and suggested that we -----------------------------------
+```{r}
+#n
+grangertest(RetailNewCarsDataTS~HousingTimeSeries)
+
+grangertest(HousingTimeSeries~RetailNewCarsDataTS)
+
+```
+Once again, we can see more consistent habits for the data that suggest that there is a strong causal relationship for new car sales to lead new housing supply demonstrated by our granger causality tests (GCT). The GCT measuring the influence that new housing supply has on new car sales presented us with insignificant findings, shown by the p-value of the test which was 0.4094. However,  the GCT measuring the influence that new car sale has on new housing supply presented us with statistically significant findings, shown by the p-value of the test to be 0.02106. From the last 3 tests for causal significance, we have enough to conclude that there is a supporting evidence that the value of new car sales can be used to indicate and predict the number of new housing supply for the US economy. This is the only direction of causality that we can assess from the data. 
+
+```{r}
+#o
+plot(predict(object = Var_model, n.ahead = 12))
+
+```
+Section III
+
+In conclusion, we believe that from our the tests used to identify a causal relationship between new car retail sales and new housing supply that there exists a pattern of the direction of new car sales leading the direction of new housing supply for the US economy. For the US economy, we can expect that the retail sales of new cars can offer economists a gauge for how the new housing production performs in the months following an observation of new car sales. In times of recession, we expect new car sales to deteriorate faster than new housing supply, and during times of expansion, we expect car sales to improve more quickly than new housing. These findings make sense considering the frequency that cars and houses are produced and financial costs and laborious efforts associated with each purchase and production of the goods. 
+
+Some areas that we could have improved our project is by using data for these two categories of the economy with longer periods. Also, we were unable to find seasonal data for new housing retail sales, which could have given us more thorough observations during recessions or other shocks to the US economy that might better explain the relationship better because of price stability or instability. 
+
+
+
+Section IV
+
+Our CSV files contain values for each month's values for retail sales for new cars and the total supply of newly constructed houses collected by the US Census Bureau and stored by FRED over the last few decades. The US Census Bureau releases the value of Retail Sales every month, which includes the value of Car Retail Sales for new and used cars, but only records the values for the last few months. The Dept. of Housing and Urban Development collects the supply of new houses and presents them to the U.S. C.B. and also only presents the last few months with each monthly report. FRED, on the other hand, has a much longer period of records for both datasets and contains the last 30 years of the Car Retail Sales data for both used and new car sales separately instead of only including them in a single table or value.
+
+Data References:
+New Car Retail Sales FRED Data: https://fred.stlouisfed.org/series/MRTSSM44111USN 
+Monthly Supply of New Houses in the United States: https://fred.stlouisfed.org/series/MSACSRNSA 
+
+US Census Bureau: https://www.census.gov/retail/marts/www/marts_current.pdf 
+Housing and Urban Development: https://www.census.gov/construction/nrs/index.html 
+
+
