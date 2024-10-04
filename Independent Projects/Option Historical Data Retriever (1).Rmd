@@ -21,7 +21,7 @@ library(timeDate)
 #########################################################################################################################
 
 
-api_key <- 'NV6CLVDP2PWFVLCU'
+api_key <- 'your_api_key'
 function1 <- 'HISTORICAL_OPTIONS'
 symbol <- 'NIO'
 dataType <- 'csv'
