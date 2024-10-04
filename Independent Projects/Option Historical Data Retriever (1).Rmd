@@ -1,0 +1,425 @@
+---
+title: "Project 9-16"
+author: "Cal Parker"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+
+# Load necessary libraries
+
+#install.packages('httr')
+#install.packages('jsonlite')
+#install.packages("bizdays")
+library(httr)
+library(jsonlite)
+library(bizdays)
+library(lubridate)             
+
+counter = 0
+# Replace 'demo' with your actual API key
+
+#install.packages("lubridate")  # Install the package (if not installed yet)
+# Load the package
+
+# Assign a specific past date (Year-Month-Day format)
+
+library(lubridate)
+
+if (file.exists("past_date.txt")) {
+  # Read the past date from the file
+  past_date <- as.Date(readLines("past_date.txt"))
+} else {
+  # If no file exists, initialize with a specific past date
+  past_date <- ymd("2024-08-16")
+}
+
+past_date <- past_date + 1
+print(past_date)
+
+# Print the updated past_date
+#cat("The new past date is:", past_date, "\n")
+
+# Save the updated past_date to the file for the next run
+writeLines(as.character(past_date), "past_date.txt")
+
+# Define a string and an integer
+
+api_key <- 'NV6CLVDP2PWFVLCU'
+function1 <- 'HISTORICAL_OPTIONS'
+date <- past_date
+symbol <- 'NIO'
+dataType <- 'csv'
+csv_file <- 'Testing Data for Columns.csv'
+
+for(date_range in date)
+  
+{
+# Build the URL for the API request
+url <- paste0('https://www.alphavantage.co/query?function=', function1,
+              '&symbol=', symbol, 
+              '&date=', date,
+              '&apikey=', api_key)
+
+# Make the GET request
+response <- GET(url)
+}
+
+
+# Read only the first row of the CSV file
+first_row <- read.csv(csv_file, header = FALSE, nrows = 1, stringsAsFactors = FALSE)
+
+# Check if all elements in the first row are empty, NA, or blank
+is_blank <- all(is.na(first_row) | first_row == "" | first_row == " ")
+
+# Print the result
+
+
+
+
+if (status_code(response) == 200) {
+  
+  # Parse the JSONcontent
+  data <- content(response, as = "text", encoding = "UTF-8")
+  
+  # Convert JSON data into an R object
+  parsed_data <- fromJSON(data, flatten = TRUE)
+  
+  parsed_data
+  # Convert list to data frame
+  my_data_frame <- as.data.frame(parsed_data)
+  
+  if (file.exists("Testing Data For Columns.csv")) {
+  # Read the past date from the file
+   # Retain column names but remove all rows
+  blank_data_frame <- my_data_frame
+  #existing_data_frame
+    
+  
+# Check if the data frame has no columns and create a new data frame if so
+
+
+if (nrow(my_data_frame) == 1) {
+  
+  
+  existing_data_zero_rows<-data.frame()
+  
+  new_data_first <- my_data_frame
+  
+  print(my_data_frame)
+  
+  combined_data_initial <- rbind(existing_data_zero_rows, new_data_first)
+  
+  existing_data2 <- combined_data_initial
+  
+  #existing_data2
+  
+  # Append the new data to an existing CSV file
+  
+  
+  # If the file already exists, append the new data
+  if (file.exists(csv_file)) {
+    write.table(existing_data2, file = csv_file, sep = ",", col.names = TRUE, row.names = FALSE, append = TRUE)
+  } else {
+    # If the file doesn't exist, create a new one
+    write.csv(existing_data2, file = csv_file, row.names = FALSE)
+  }
+  
+
+} else {
+  
+  existing_data4<-data.frame()
+  
+  new_data_append <- my_data_frame
+  # Step 3: Append the new data to the existing dataset using rbind
+  combined_data <- rbind(existing_data4, new_data_append)
+
+  # View the combined data
+  print(combined_data)
+
+  # Update the existing data
+  existing_data2 <- combined_data
+  print(existing_data2)
+  
+  
+  # If the file already exists, append the new data
+  if (file.exists(csv_file)) {
+    write.table(existing_data2, file = csv_file, sep = ",", col.names = FALSE, row.names = FALSE, append = TRUE)
+  } else {
+    # If the file doesn't exist, create a new one
+    write.csv(existing_data2, file = csv_file, row.names = FALSE)
+  }
+
+
+# Create new data to append
+  #appending_new_data <- my_data_frame
+
+  #existing_data<-combined_data
+
+  #combined_data <<- rbind(existing_data, appending_new_data)
+
+# View the combined data
+print(combined_data)
+
+existing_data<-combined_data
+
+print(existing_data)
+
+
+}
+  
+
+} 
+  
+  else 
+  {
+  print("No File")
+  }
+  
+} else {
+  cat("Error: Unable to fetch data. Status code:", status_code(response), "\n")
+}
+
+if (is_blank) {
+ 
+# Define the new column titles
+column_titles <- c("endpoint", "message", "data.contractID", "data.symbol", 
+                   "data.expiration", "data.strike", "data.type", 
+                   "data.last", "data.mark", "data.bid", "data.bid_size", 
+                   "data.ask", "data.ask_size", "data.volume", 
+                   "data.open_interest", "data.date", 
+                   "data.implied_volatility", "data.delta", "data.gamma", 
+                   "data.theta", "data.vega", "data.rho")
+
+# Read the existing CSV file without column names
+existing_data <- read.csv(csv_file, header = FALSE)
+
+# Assign the new column titles to the data
+colnames(existing_data) <- column_titles
+
+# Write the updated data back to the CSV file
+write.csv(existing_data, file = csv_file, row.names = FALSE)
+
+} else {
+  print("The first row is not blank.")
+}
+
+print(date)
+
+
+
+```
+
+
+```{r}
+  # Replace with your actual file path
+  
+  # Step 2: Determine the row number where you want to place the data
+  # If row doesn't exist, we'll add a new row
+  row_to_modify <- 0  # For example, place data in the 10th row
+
+  # Step 3: Define the new data to place (must match the number of columns)
+  new_data <- c("new_endpoint", "new_message", "123", "AAPL", "2024-12-31", 
+                "150", "call", "10.5", "10.7", "10.2", "100", "10.8", 
+                "200", "300", "400", "2024-10-01", "0.25", "0.50", "0.05", 
+                "-0.10", "0.01", "0.03")
+  
+  # Step 4: Check if the specific row exists, if not, append a new row
+  if (row_to_modify <= nrow(df)) {
+    # Replace the data in the specific row
+    df[row_to_modify, ] <- new_data
+  } else {
+    # Add a new row with the data
+    # Ensure the row is filled with NA or empty strings for missing rows
+    df <- rbind(df, matrix(NA, nrow = row_to_modify - nrow(df), ncol = ncol(df)))
+    df[row_to_modify, ] <- new_data
+  }
+  
+  # Step 5: Write the updated data frame back to the CSV file
+  write.csv(df, csv_file, row.names = FALSE)
+  
+  print(paste("Data placed in row", row_to_modify, "and saved to the CSV file."))
+
+
+View(df)
+
+
+
+
+
+
+
+
+```
+
+
+```{r}
+# Sample data frame
+df <- data.frame(
+  endpoint = c("ep1", "ep2", "ep3"),
+  message = c("msg1", "msg2", "msg3"),
+  data.contractID = c("ID1", "ID2", "ID3")
+)
+
+# Write the data frame to a CSV file (headers included by default)
+
+write.csv(df, csv_file, row.names = FALSE)
+
+print(paste("Data frame written to", csv_file, "with headers included."))
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+```{r}
+
+  
+csv_file <- 'Testing Data for Columns.csv'
+
+if (file.exists(csv_file)) {
+  # Step 1: Read only the first row from the CSV file without treating it as header
+  my_data_frame <- read.csv(csv_file, stringsAsFactors = FALSE, nrows = 1, header = FALSE)
+  
+  # Step 2: Check if the first row is blank (all NA or empty strings)
+  is_blank_row <- function(row) {
+    all(is.na(row) | row == "")
+  }
+  
+  # Step 3: Apply the function to the first row of the data frame
+  if (is_blank_row(my_data_frame[0, ])) {
+    print("The first row is blank.")
+  #existing_data_frame
+    
+  } else {
+    print("The first row is not blank.")
+  }
+}
+
+# Define the new column titles
+column_titles <- c("endpoint", "message", "data.contractID", "data.symbol", 
+                   "data.expiration", "data.strike", "data.type", 
+                   "data.last", "data.mark", "data.bid", "data.bid_size", 
+                   "data.ask", "data.ask_size", "data.volume", 
+                   "data.open_interest", "data.date", 
+                   "data.implied_volatility", "data.delta", "data.gamma", 
+                   "data.theta", "data.vega", "data.rho")
+
+# Read the existing CSV file without column names
+existing_data <- read.csv(csv_file, header = FALSE)
+
+# Assign the new column titles to the data
+colnames(existing_data) <- column_titles
+
+# Write the updated data back to the CSV file
+write.csv(existing_data, file = csv_file, row.names = FALSE)
+
+View(existing_data)
+
+
+
+
+
+```
+
+
+```{r}
+column_titles <- c("endpoint", "message", "data.contractID", "data.symbol", 
+                   "data.expiration", "data.strike", "data.type", 
+                   "data.last", "data.mark", "data.bid", "data.bid_size", 
+                   "data.ask", "data.ask_size", "data.volume", 
+                   "data.open_interest", "data.date", 
+                   "data.implied_volatility", "data.delta", "data.gamma", 
+                   "data.theta", "data.vega", "data.rho")
+
+# Create a data frame with just one row (empty data but with column names)
+df <- data.frame(matrix(ncol = length(column_titles), nrow = 0))
+colnames(df) <- column_titles
+
+
+View(df)
+
+
+```
+
+
+```{r}
+csv_file <- 'Testing Data for Columns.csv'
+
+if (file.exists(csv_file)) {
+  # Step 1: Read the CSV file (we'll read everything here)
+  my_data_frame <- read.csv(csv_file, stringsAsFactors = FALSE, header = FALSE)
+  
+  # Step 2: Define a function to check if a row is blank
+  is_blank_row <- function(row) {
+    all(is.na(row) | row == "")
+  }
+  
+  # Step 3: Check if the first row is blank
+  if (is_blank_row(my_data_frame[1, ])) {
+    print("The first row is blank.")
+    
+    # Step 4: Define the column titles
+    new_column_titles <- c(
+      "endpoint", "message", "data.contractID", "data.symbol", "data.expiration", 
+      "data.strike", "data.type", "data.last", "data.mark", "data.bid", 
+      "data.bid_size", "data.ask", "data.ask_size", "data.volume", 
+      "data.open_interest", "data.date", "data.implied_volatility", 
+      "data.delta", "data.gamma", "data.theta", "data.vega", "data.rho"
+    )
+    
+    # Step 5: Replace the first row with the column titles
+    my_data_frame[1, ] <- new_column_titles
+    
+    # Step 6: Save the updated data frame to a new CSV file
+    write.csv(my_data_frame, "updated_file.csv", row.names = FALSE)
+    print("First row replaced with column titles and CSV file saved as 'updated_file.csv'.")
+    
+  } else {
+    print("The first row is not blank.")
+  }
+}
+
+View(my_data_frame)
+
+```
+
+
+```{r}
+
+
+if (file.exists(csv_file)) {
+  # Step 1: Read the CSV file into a data frame
+  df <- read.csv(csv_file, stringsAsFactors = FALSE)
+  
+  # Step 2: Locate the specific row where you want to append data
+  # For example, you want to append data to the 3rd row
+  row_to_modify <- 1
+  
+  # Step 3: Define the new data you want to append (must match the number of columns)
+  new_data <- c("new_endpoint", "new_message", "123", "AAPL", "2024-12-31", 
+                "150", "call", "10.5", "10.7", "10.2", "100", "10.8", 
+                "200", "300", "400", "2024-10-01", "0.25", "0.50", "0.05", 
+                "-0.10", "0.01", "0.03")
+  
+  # Step 4: Assign the new data to the specific row
+  df[row_to_modify, ] <- new_data
+  
+  # Step 5: Save the updated data frame back to the CSV file
+  write.csv(df, csv_file, row.names = FALSE)
+  
+  print(paste("Data appended to row", row_to_modify, "and saved back to the CSV file."))
+}
+
+
+
+```
