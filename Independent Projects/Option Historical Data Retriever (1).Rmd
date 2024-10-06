@@ -22,14 +22,14 @@ library(timeDate)
 
 api_key <- 'NV6CLVDP2PWFVLCU'
 function1 <- 'HISTORICAL_OPTIONS'
-symbol <- 'NIO'
+symbol <- 'NVDA'
 dataType <- 'csv'
 
 # Sample data frame to save
 my_data <- data.frame()
 
 # Define the file name for the new CSV file
-csv_file <- 'NIO Option Data-8-24-10-04-24.csv'
+csv_file <- paste(symbol,'Option Data-8-01-24-10-04-24.csv')
 
 # Save the data frame to a new CSV file in the working directory
 write.csv(my_data, file = csv_file, row.names = FALSE)
